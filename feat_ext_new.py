@@ -30,11 +30,11 @@ for l in data:
 	    c1 = re.sub('\d\d/\d\d/\d\d\d\d \d\d:\d\d',addDate,c)
 	    ll = re.split('\nFrom: | \tFrom:',c1)
 	    if len(ll)>1:
+			ok = 1
 	        for i in ll[1:]:
 	            e = email.message_from_string("From:" + i)
-	            #print "this is what printed : " , e['From']
-	            #print "and tha dates is: " , e['Date']
 	            if(e['Date'] is None):
-					print 'FUCK WE HAVE A NONE'
-					stophere =1
-	        a.append({"date": l['Date'], "content": ll})
+					if(e['When'] is None):
+						print 'FUCK WE HAVE A NONE'
+						ok = 0
+	        a.append({"date": l['Date'], "content": e['Content']})
