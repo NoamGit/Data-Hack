@@ -7,6 +7,7 @@ from nltk import word_tokenize
 path = '/Users/aharon/Downloads/maildir'
 
 outPath = '../output/'
+rel_array = []
 
 def getMailBody(e):
 	if e.is_multipart():
@@ -37,10 +38,13 @@ for root, dirs, files in os.walk(path):
 		rel_file = root[len(path)+1:] + '/' + file_name
 		rel_file = rel_file.replace('/', '_')
 		rel_file = rel_file.replace('\\', '_')
-		with open(outPath + rel_file, 'w') as outfile:
-			json.dump(email_dat, outfile)
+		email_dat['fileName'] = rel_file
+		rel_array.append(email_dat)
+		#with open(outPath + rel_file, 'w') as outfile:
+		#	json.dump(email_dat, outfile)
 	if counter > 1000:
 		break
 
-
+with open('msg_txt.json', 'w') as outfile:
+	json.dump(rel_array, outfile)
 
