@@ -1,0 +1,4 @@
+sudo pip install nltk
+
+FROM PYTHON:
+nltk.download('punkt')
