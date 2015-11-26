@@ -1,243 +1,271 @@
 
 # coding: utf-8
 
-# In[121]:
+# In[496]:
 
-import pandas as pd
-from sklearn.linear_model import LogisticRegression, LinearRegression 
 import numpy as np
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import accuracy_score
-import math
-from numpy import linalg as LA
-from sklearn.ensemble import RandomForestClassifier as RF
-import random
-from numpy.random import RandomState
-from sklearn.preprocessing import StandardScaler
-SEED = 1000
+import email
+import os
+from textblob import TextBlob
+from textblob import Word
+import json
+import time 
+import datetime 
+from datetime import date
+from datetime import timedelta
+import re
 
 
-# In[185]:
+# In[273]:
 
-#d = pd.read_csv("jona_tags_with_parser.csv")
-#k  = pd.read_csv("all_kw_with_index_rank.csv")
-
-org = pd.read_csv("index_urls_for_pd.csv")
-org = org.dropna(axis=0, how='all')
-
-new_tags = pd.read_csv("index_url_for_pd_jona_tags.csv")
-#new_tags = new_tags[new_tags.isDefinitelyBad != "na"]
-#new_tags = StandardScaler().fit_transform(new_tags)
-all_f = [u'content-size', u'abs-ratio','number-stop-words-in-html',  u'score2', u'score3',u'stop-words-raw-content',
-       u'number-of-sentences-with-stop', u'number-scores', u'ratio13', u'score1',
-       u'ratio23',  u'len-data', u'ratio',
-       u'real-ratio12']
-
-not_now = [u'is-index-new', u'neg_ind', u'pos_ind',
-       u' suspected-index-page-lr-old', u'suspected-index-page.1',
-       u' suspected-junk-page',u'suspected-index-page', u'n-sen',
-       u'vol', u'index_square', u'content-size', u' score2', u' score3',u'stop-words-raw-content',
-       u'number-of-sentences-with-stop', u'number-stop-words-in-html',
-       u'number-scores', u' ratio13', u' score1',
-       u'ratio23', u'abs-ratio', u'len-data', u'ratio',
-       u'real-ratio12']
+stop_w1 = ["'m", "am", "all","she'll", "don't", 'being', 'over', 'through', 'during', 'its', 'before', "he's", "when's", "we've", 'had', 'should', "he'd", 'to', 'only', 'does', "here's", 'under', 'ours', 'has', "haven't", 'then', 'them', 'his', 'above', 'very', "who's", "they'd", 'cannot', "you've", 'they', 'not', 'yourselves', 'him', 'nor', "we'll", 'did', "they've", 'these', 'she', 'each', "won't", 'where', "mustn't", "isn't", "i'll", "why's", 'because', "you'd", 'doing', 'some', "hasn't", "we'd", 'further', 'ourselves', "shan't", 'what', 'for', 'herself', 'below', "there's", "shouldn't", "they'll", 'between', 'be', 'we', 'who', "doesn't", 'of', 'here', "hadn't", "aren't", 'by', 'both', 'about', 'her', 'theirs', "wouldn't", 'against', "i'd", "weren't", "i'm", 'or', "can't", 'this', 'own', 'into', 'yourself', 'down', 'hers', "couldn't", 'your', "you're", 'from', "how's", 'would', 'whom', "it's", 'there', 'been', "he'll", 'their', "we're", 'themselves', 'was', 'until', 'too', 'himself', 'that', "didn't", "what's", 'but', 'it', 'with', 'than', 'those', 'he', 'me', "they're", 'myself', "wasn't", 'up', 'while', 'ought', 'were', 'more', 'my', 'could', 'are', 'and', 'do', 'is', 'am', 'few', 'an', 'as', 'itself', 'at', 'have', 'in', 'any', 'if', 'again', "let's", 'no', "i've", 'when', 'same', 'how', 'other', 'which', 'you', 'out', 'our', 'after', "where's", 'most', 'such', 'on', 'why', 'a', 'off', 'i', "she'd", 'having', "you'll", 'so', "she's", 'the', 'once', 'yours', "that's"]
+stop_w2 = [i.capitalize() for i in stop_w1]
+stop_w = stop_w2 + stop_w1
+confidence = ["just","sorry","hopefully","actually","kind of"]
+positive = ['absolutely', 'adorable', 'accepted', 'acclaimed', 'accomplish', 'accomplishment', 'achievement', 'action', 'active', 'admire', 'adventure', 'affirmative', 'affluent', 'agree', 'agreeable', 'amazing', 'angelic', 'appealing', 'approve', 'aptitude', 'attractive', 'awesome', 'beaming', 'beautiful', 'believe', 'beneficial', 'bliss', 'bountiful', 'bounty', 'brave', 'bravo', 'brilliant', 'bubbly', 'calm', 'celebrated', 'certain', 'champ', 'champion', 'charming', 'cheery', 'choice', 'classic', 'classical', 'clean', 'commend', 'composed', 'congratulation', 'constant', 'cool', 'courageous', 'creative', 'cute', 'dazzling', 'delight', 'delightful', 'distinguished', 'divine', 'earnest', 'easy', 'ecstatic', 'effective', 'effervescent', 'efficient', 'effortless', 'electrifying', 'elegant', 'enchanting', 'encouraging', 'endorsed', 'energetic', 'energized', 'engaging', 'enthusiastic', 'essential', 'esteemed', 'ethical', 'excellent', 'exciting', 'exquisite', 'fabulous', 'fair', 'familiar', 'famous', 'fantastic', 'favorable', 'fetching', 'fine', 'fitting', 'flourishing', 'fortunate', 'free', 'fresh', 'friendly', 'fun', 'funny', 'generous', 'genius', 'genuine', 'giving', 'glamorous', 'glowing', 'good', 'gorgeous', 'graceful', 'great', 'green', 'grin', 'growing', 'handsome', 'happy', 'harmonious', 'healing', 'healthy', 'hearty', 'heavenly', 'honest', 'honorable', 'honored', 'hug', 'idea', 'ideal', 'imaginative', 'imagine', 'impressive', 'independent', 'innovate', 'innovative', 'instant', 'instantaneous', 'instinctive', 'intuitive', 'intellectual', 'intelligent', 'inventive', 'jovial', 'joy', 'jubilant', 'keen', 'kind', 'knowing', 'knowledgeable', 'laugh', 'legendary', 'light', 'learned', 'lively', 'lovely', 'lucid', 'lucky', 'luminous', 'marvelous', 'masterful', 'meaningful', 'merit', 'meritorious', 'miraculous', 'motivating', 'moving', 'natural', 'nice', 'novel', 'now', 'nurturing', 'nutritious', 'okay', 'one', 'one-hundred percent', 'open', 'optimistic', 'paradise', 'perfect', 'phenomenal', 'pleasurable', 'plentiful', 'pleasant', 'poised', 'polished', 'polishe', 'powerful', 'prepared', 'pretty', 'principled', 'productive', 'progress', 'prominent', 'protected', 'proud', 'quality', 'quick', 'quiet', 'ready', 'reassuring', 'refined', 'refreshing', 'rejoice', 'reliable', 'remarkable', 'resounding', 'respected', 'restored', 'reward', 'rewarding', 'right', 'robust', 'safe', 'satisfactory', 'secure', 'seemly', 'simple', 'skilled', 'skillful', 'smile', 'soulful', 'sparkling', 'special', 'spirited', 'spiritual', 'stirring', 'stupendous', 'stunning', 'success', 'successful', 'sunny', 'super', 'superb', 'supporting', 'surprising', 'terrific', 'thorough', 'thrilling', 'transforming', 'transformative', 'trusting', 'truthful', 'unreal', 'unreal', 'upbeat', 'upright', 'upstanding', 'valued', 'vibrant', 'victorious', 'victory', 'vigorous', 'wealthy', 'welcome', 'well', 'whole', 'wholesome', 'willing', 'wonderful', 'worthy', 'wow', 'yes', 'yummy', 'zeal', 'zealous']
+negative = ['abysmal', 'adverse', 'alarming', 'angry', 'annoy', 'anxious', 'apathy', 'appalling', 'atrocious', 'awful', 'bad', 'banal', 'barbed', 'belligerent', 'bemoan', 'beneath', 'boring', 'broken', 'callous', "can't", 'clumsy', 'coarse', 'cold', 'cold-hearted', 'collapse', 'confused', 'contradictory', 'contrary', 'corrosive', 'corrupt', 'crazy', 'creepy', 'criminal', 'cruel', 'cry', 'cutting', 'dead', 'decaying', 'damage', 'damaging', 'dastardly', 'deplorable', 'depressed', 'deprived', 'deformed', 'deny', 'despicable', 'detrimental', 'dirty', 'disease', 'disgusting', 'disheveled', 'dishonest', 'dishonorable', 'dismal', 'distress', "don't", 'dreadful', 'dreary', 'enraged', 'eroding', 'evil', 'fail', 'faulty', 'fear', 'feeble', 'fight', 'filthy', 'foul', 'frighten', 'frightful', 'gawky', 'ghastly', 'grave', 'greed', 'grim', 'grimace', 'gross', 'grotesque', 'gruesome', 'guilty', 'haggard', 'hard', 'hard-hearted', 'harmful', 'hate', 'hideous', 'homely', 'horrendous', 'horrible', 'hostile', 'hurt', 'hurtful', 'icky', 'ignore', 'ignorant', 'ill', 'immature', 'imperfect', 'impossible', 'inane', 'inelegant', 'infernal', 'injure', 'injurious', 'insane', 'insidious', 'insipid', 'jealous', 'junky', 'lose', 'lousy', 'lumpy', 'malicious', 'mean', 'menacing', 'messy', 'misshapen', 'missing', 'misunderstood', 'moan', 'moldy', 'monstrous', 'naive', 'nasty', 'naughty', 'negate', 'negative', 'never', 'no', 'nobody', 'nondescript', 'nonsense', 'not', 'noxious', 'objectionable', 'odious', 'offensive', 'old', 'oppressive', 'pain', 'perturb', 'pessimistic', 'petty', 'plain', 'poisonous', 'poor', 'prejudice', 'questionable', 'quirky', 'quit', 'reject', 'renege', 'repellant', 'reptilian', 'repulsive', 'repugnant', 'revenge', 'revolting', 'rocky', 'rotten', 'rude', 'ruthless', 'sad', 'savage', 'scare', 'scary', 'scream', 'severe', 'shoddy', 'shocking', 'sick', 'sickening', 'sinister', 'slimy', 'smelly', 'sobbing', 'sorry', 'spiteful', 'sticky', 'stinky', 'stormy', 'stressful', 'stuck', 'stupid', 'substandard', 'suspect', 'suspicious', 'tense', 'terrible', 'terrifying', 'threatening', 'ugly', 'undermine', 'unfair', 'unfavorable', 'unhappy', 'unhealthy', 'unjust', 'unlucky', 'unpleasant', 'upset', 'unsatisfactory', 'unsightly', 'untoward', 'unwanted', 'unwelcome', 'unwholesome', 'unwieldy', 'unwise', 'upset', 'vice', 'vicious', 'vile', 'villainous', 'vindictive', 'weary', 'wicked', 'woeful', 'worthless', 'wound', 'yell', 'yucky', 'zero', 'wary']
+urgent_words = ["time is running out" ,"last chance" ,"up to", "until", "deadline",
+          "hurry", "quick","ASAP","fast","as soon as possible"]
 
 
-# In[188]:
-
-t = run_many_times()
-t
-
-
-# In[189]:
-
-t
-
-
-# In[181]:
-
-## Run model on not index pages...
-def run_on_all_space():
-    model = LogisticRegression(penalty="l2",C=0.08)
-    new_tags = pd.read_csv("index_url_for_pd_jona_tags.csv")
-    new_tags = new_tags.reindex(np.random.permutation(new_tags.index))
-    model.fit(new_tags[all_f],new_tags[st])
-    t = np.append(model.coef_, model.intercept_)
-    return t
-
-def run_many_times():
-    all_coeff = []
-    names = []
-    for i in range(10):
-        new_tags = pd.read_csv("index_url_for_pd_jona_tags.csv")
-        new_tags = new_tags.reindex(np.random.permutation(new_tags.index))
-        a = run(new_tags, "isDefinitelyBad", 11) 
-        all_coeff.append(a[0])
-        names.append(a[1])
-    return all_coeff, names
-
-def run(df, st, seed):
-    train_df, test_df = train_test(df, seed)
-    res = run_model(all_f, train_df, test_df, st, c=0.08)
-    feature_import(train_df,test_df, st,all_f)
-    run_c(train_df, test_df,st)
-    return res
-
-def sigmoid(x):
-    return 1 / (1 + math.exp(-x))
-
-def process_data(d,k):
-    r = k['index']
-    k['norm_index'] = [i/LA.norm(r) for i in r]
-    #kk = k[["org-url","n-sen","vol","index_square",u'index','norm_index']]
-    d['org-url'] = d['url']
-    df = pd.merge(d, k, right_index=True, how="inner",on="org-url")
-    df = df.fillna(0)
-    return df
-
-def train_test(df,seed):
-    prng = RandomState(seed)
-    train_index = np.random.permutation(int(0.8*df.shape[0]))
-    test_index = [i for i in range(df.shape[0]) if i not in train_index]
-    #print "train intrx", train_index
-    train_df = df.iloc[train_index,:]
-    test_df = df.iloc[test_index,:]
-    print "train df shape:", train_df.shape ," test df shape:", test_df.shape
-    return train_df, test_df
-
-
-def run_model(all_f, train_df, test_df, st, c=0.08, csv_name=None):
-    model = LogisticRegression(penalty="l2",C=c)
-    tr = train_df[all_f]
-    tst = test_df[all_f]
-    #norm = StandardScaler()
-    #norm.fit(tr)
-    #tr = norm.transform(tr)
-    #tst = norm.transform(tst)
-    model.fit(tr,train_df[st])
-    y_pred = model.predict(tst)
-    c =  confusion_matrix(test_df[st], y_pred)
-    print ">>>>> "
-    print c
-    print calc_recall(c)
-    #print sorted(zip(model.coef_[0], train_df[all_f].columns),key=lambda x: x[0],reverse=True)
-    #print zip(model.coef_[0], train_df[all_f].columns)
-    if csv_name:
-        test_df["pred"] = y_pred
-        test_df.to_csv(csv_name)
-    return np.append(model.coef_, model.intercept_),tr[all_f].columns #,y_pred,model.predict_proba
-
-def feature_import(train_df,test_df, ds,all_f):
-    m = RF()
-    m.fit(train_df[all_f],train_df[ds])
-    y = m.predict(test_df[all_f])
-    z = zip(m.feature_importances_,train_df[all_f].columns)
-    c =confusion_matrix(y,test_df[ds])
-    print "RF res c:",c
-    print sorted(z, key=lambda x: x[0],reverse=True)
-
-def calc_recall(c):
-    tp = float(c[0][0])
-    fp = float(c[0][1])
-    fn = float(c[1][0])
-    tn = float(c[1][1])
-    try:
-        precision = float(tp) / (tp + fp)
-        recall = float(tp) / (tp + fn)
-        sps = float(tn) / (tn + fp)
-        accuracy = float(tp + tn) / (tp + tn + fp + fn)
-        print "precision:", precision, "recall:", recall, "sps:", sps, "accuracy:", accuracy
-    except:
-        print "there was a prblem - division in zero"
-    #return precision, recall, sps, accuracy
-
-def predict_index(coeff,test_df,all_f):
-    b = []
-    for i in (range (test_df.shape[0])):
-        v = np.append(np.array(test_df.loc[:,all_f])[i],[1])
-        s = sigmoid(np.inner(coeff,v))
-        b.append(0 if (s < 0.5) else 1)
-    return b
-
-def run_c(train_df, test_df,st):
-    for c in [0.001,0.02,0.04,0.06, 0.08,0.1,0.2,0.3,0.4,0.8,1]:
-        model = LogisticRegression(penalty="l2",C=c)
-        model.fit(train_df[all_f],train_df[st])
-        y_pred = model.predict(test_df[all_f])
-        y_train_pred =  model.predict(train_df[all_f])
-        print "c is :", c, "and accuracy score:" , accuracy_score(test_df[st], y_pred)
-        print "test confuaion m:"
-        print confusion_matrix(test_df[st], y_pred)
-        #print "and train cf:"
-        #print confusion_matrix(train_df[st], y_train_pred)
-
-
-# In[4]:
-
-## Run classifier on raw data. 
-
-
-# In[5]:
+# In[ ]:
 
 
 
 
-# In[9]:
+# In[35]:
 
-a = {}
-b = []
-c = np.append(model.coef_[0],model.intercept_)
-for i in (range (test_df.shape[0])):
-    v = np.append(np.array(test_df.loc[:,all_f])[i],[1])
-    s = sigmoid(np.inner(c,v))
-    a[np.array(test_df.loc[:,"url"])[i]] = 1 if (s < 0.5) else 0
-    b.append(0 if (s < 0.5) else 1)
+path = '/Users/shani/Documents/private/hack/datahack/maildir/'
+
+def aharon():
+    emails = []
+    counter = 0
+    for root, dirs, files in os.walk(path):
+        for f in files:
+            if counter > 10:
+                break
+            if f.find('.DS_Store') == -1:
+                counter = counter + 1
+                ff = open(root + '/' + f)
+                print "FILE NAME: " , root + '/' + f
+                s = email.message_from_file(ff)
+                emails.append({"message":s.get_payload(),"data":zip(s.keys(), s.values())})
+    return emails
+
+
+# In[268]:
+
+ss = TextBlob(s)
+print ss.sentiment
+print ss.noun_phrases
+#print ss.sentences
+
+
+# In[100]:
+
+#s = "I plan on calling my all-- star selections tonight but I'm not sure what to \ntell them as far as practices are concerned.\n\nalso: do the Packers still get 8 plus 1 alternate?"
+
+
+# In[288]:
+
+def noun_phrases(txt_b):
+    return len(txt_b.noun_phrases)
+
+def polarity(txt_b):
+    return txt_b.sentiment.polarity
+
+def subjectivity(txt_b):
+    return txt_b.sentiment.subjectivity
+
+def polarity(txt_b):
+    return txt_b.sentiment.polarity
+
+def has_questions(txt):
+    return txt.find("?")!=-1
+        
+def question_related(txt):
+    return txt.find("question")!=-1 
     
-    
-### Try to  normalize..
-tmp_tr_df = train_df[all_f]
-tmp_test_df = test_df[all_f]
-norm_tr_df = (tmp_tr_df - tmp_tr_df.mean()) / (tmp_tr_df.max() - tmp_tr_df.min())
-norm_test_df = (tmp_test_df - tmp_test_df.mean()) / (tmp_test_df.max() - tmp_test_df.min())
+def kria(txt):
+    return txt.find("!")!=-1 
 
-model = LogisticRegression(penalty="l2",C=0.04)
-model.fit(norm_tr_df,y_train)
-y_pred = model.predict(norm_test_df)
+def count_dollar(txt):
+    return txt.find("$")!=-1
 
-print confusion_matrix(y_test, y_pred)
-print accuracy_score(y_test, y_pred)
-test_df["pres"] = y_pred
-test_df["real"] = y_test
+def count_mess(txt_words):
+    return len(txt_words)
 
-#test_df.to_csv("jona_test_res.csv")
+def count_stop_words(txt_words):
+    return len([i for i in txt_words if i in stop_w])
+
+def count_not_stop_words(txt_words_filtered):
+    return len(txt_words_filtered)
+
+def confident(txt_words):
+    return len([i for i in txt_words if i in confidence])
+
+def negative_kw(txt_words):
+    return len([i for i in txt_words if i in negative])
+
+def positive_kw(txt_words):
+    return len([i for i in txt_words if i in positive])
+
+def num_sentences(txt_b):
+    return len(txt_b.sentences)
+
+def num_spelling_error(txt_words):
+    t = [i for i in txt_words if i not in stop_w] # shouldn't be here..
+    return len([len(j) for j in [i.spellcheck() for i in t if not i[0].isupper()] if len(j) > 1])
+
+def check_urgency(txt):
+    # gets string and finds occurences of words from urgent dictionary
+    idx = [txt.find(word) for word in urgent_words]
+    return len([i for i in idx if i!=-1])
+
+
+# In[289]:
+
+def get_body_features(txt):
+    txt_b = TextBlob(txt)
+    txt_words = txt_b.words
+    txt_words_filtered = [i for i in [i.lower() for i in txt_words] if i not in stop_w1]
+    return [noun_phrases(txt_b), polarity(txt_b),subjectivity(txt_b), has_questions(txt), question_related(txt), kria(txt), count_dollar(txt), count_mess(txt_words),
+            count_stop_words(txt_words),count_not_stop_words(txt_words_filtered), confident(txt_words_filtered),
+            negative_kw(txt_words_filtered), positive_kw(txt_words_filtered), num_sentences(txt_b),
+            num_spelling_error(txt_words),check_urgency(txt)]
+
+
+# In[ ]:
+
+filename = "/Users/shani/Documents/private/hack/msg_txt0.json"
+with open(filename) as data_file:    
+    data = json.load(data_file)
+
+
+# In[325]:
 
 
 
-#run(new_tags, "is_index_real", 10) 
-#
-train_df, test_df = train_test(new_tags, 10)
-st = "isDefinitelyBad"
-tr = train_df[all_f]
-tst = test_df[all_f]
-norm = StandardScaler()
-norm.fit(tr)
-tr = norm.transform(tr)
-tst = norm.transform(tst)
-model.fit(tr,train_df[st])
-y_pred = model.predict(tst)
-c =  confusion_matrix(test_df[st], y_pred)
 
-print "c is: ", c
-y_pred_prob =  model.predict_proba(test_df[all_f])
-#print y_pred#
-#print test_df["isDefinitelyBad"]
-#train_df[all_f]
+# In[302]:
 
-#r = run(new_tags, "isDefinitelyBad", 10) 
-#r[2]
-#train_df[all_f]
-zip(model.coef_[0], train_df[all_f].columns)
-print test_df[st]
-print [i[0] for i in y_pred_prob]
+len(data)
+
+
+# In[ ]:
+
+cont = [i['Content'].split("\nFrom:") for i in data]
+
+
+# In[466]:
+
+cont
+
+
+# In[494]:
+
+
+#print len([j for j in [i['Content'].split("------------- Forwarded by") for i in data] if len(j)>1])
+
+
+[i['Content'] for i in data if "Bryan Hull" in i['Content']]
+
+
+# In[409]:
+
+#dd = [email.message_from_string("from" + j) for j in g]
+
+email.message_from_string("From:"+g[1]).keys()
+
+
+# In[503]:
+
+# for one perseon..
+   
+re.split("\nFrom: | \tFrom:",  "n\n\nFrom:  Bryan Hull  andsdkfjdlskaj \tFrom: it is liskeltsfkjdvc")
+
+
+# In[517]:
+
+def addDate(matchobj):
+    return '\nDate: ' + matchobj.group(0)
+
+a = []
+for l in data:
+    c = l['Content']
+    c = re.sub('\d\d/\d\d/\d\d\d\d \d\d:\d\d',addDate,c)
+    ll = re.split('\nFrom: | \tFrom:',c)
+    if len(ll)>1:
+        for i in ll[1:]:
+            e = email.message_from_string("From:" + i)
+            #if "Bryan Hull" in c:
+                #print "WTFFF  : ", ll
+            print "this is what printed : " , e['From']
+            print "and tha dates is: " , e['Date']
+        a.append({"date": l['Date'], "content": ll})
+
+
+# In[486]:
+
+a[0]['content'][1]
+a[0]['date']
+
+
+# In[487]:
+
+a[0]['content'][1]
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+all_emails_with_from = [j for j in [] if len(j)>1]
+for one_email in all_emails_with_from:
+    for return_email in one_email[1:]:  
+        e = email.message_from_string("From:" + return_email)
+        print "this is" + e['From']
+
+
+# In[498]:
+
+a='Beautiful, is; better*than\nugly'
+
+['Beautiful', 'is', 'better', 'than', 'ugly']
+
+
+# In[474]:
+
+
+all_emails_with_from1 = [j for j in [i['Content'].split("\n\t\n\t\n\tFrom:") for i in data] if len(j)>1]
+len(all_emails_with_from1)
+len(all_emails_with_from)
+
+
+# In[464]:
+
+import datetime
+
+#datetime.datetime.strptime("10/25/2000 02:42 PM", '%m/%d/%y %YT%H:%M:%SZ')
+datetime.datetime.strptime("10/25/2000", '%m/%d/%Y ')
+
+#fromtimestamp("10/24/2000 06:25 PM")
+
+
+# In[361]:
+
+dd.keys()
+
+
+# In[362]:
+
+dd['from']
+
+
+# In[ ]:
+
 
 
