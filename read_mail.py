@@ -3,7 +3,9 @@ import json
 import nltk, re, pprint
 from nltk import word_tokenize
 
-path = 'C:\Enron\enron_mail_20150507\maildir'
+#path = 'C:\Enron\enron_mail_20150507\maildir'
+path = '/Users/aharon/Downloads/maildir'
+
 outPath = '../output/'
 
 def getMailBody(e):
