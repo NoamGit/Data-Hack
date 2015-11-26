@@ -27,14 +27,14 @@ for root, dirs, files in os.walk(path):
 			continue
 		f = open(root + '/' + file_name)
 		e = email.message_from_file(f)
-		if("Re:" in e['Subject']):
+		if("Re:".lower() in e['Subject'].lower()):
 			counter = counter + 1
 			email_dat = {}
 			for x in e.items():
-				email_dat[x[0]] = x[1]
+				email_dat[x[0]] = x[1].decode('latin-1')
 			body = getMailBody(e)
 			msg_txt = [word.lower() for word in word_tokenize(body)]
-			email_dat['Content'] = body
+			email_dat['Content'] = body.decode('latin-1')
 			email_dat['NumLines'] = body.count('\n')
 			#json_content = json.dumps(email_dat)
 			rel_file = root[len(path)+1:] + '/' + file_name
@@ -46,5 +46,6 @@ for root, dirs, files in os.walk(path):
 	if(counter > 10000):
 		with open(outPath + 'msg_txt' + str(fileInd) +' .json', 'w') as outfile:
 			json.dump(rel_array, outfile)
+			rel_array = []
 			fileInd = fileInd + 1
 		counter = 0;
