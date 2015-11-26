@@ -1,4 +1,5 @@
 import email, os, csv
+import json
 import nltk, re, pprint
 from nltk import word_tokenize
 
@@ -14,11 +15,20 @@ for root, dirs, files in os.walk(path):
 		f = open(root + '/' + file_name)
 		e = email.message_from_file(f)
 		counter = counter + 1
-		meta_dat = [e[x] for x in e.keys()]
+		email_dat = {}
+		for x in e.items():
+			email_dat[x[0]] = x[1]
 		body = getMailBody(e)
 		msg_txt = [word.lower() for word in word_tokenize(body)]
-	if counter > 1:
-			break
+		email_dat['Content'] = msg_txt
+		email_dat['NumLines'] = body.count('\n')
+		json_content = json.dumps(email_dat)
+		rel_file = root[len(path)+1:] + '/' + file_name
+		rel_file = rel_file.replace('/', '|')
+		with open(rel_file, 'w') as outfile:
+			json.dump(email_dat, outfile)
+	if counter > 1000:
+		break
 
 
 
